@@ -2,7 +2,7 @@ FROM ruby:2.5.1
 MAINTAINER Tobias Schlottke <tobias.schlottke@gmail.com>
 
 RUN apt-get update && \
-    apt-get install -y net-tools
+    apt-get install -y net-tools ffmpeg
 
 # Install gems
 ENV APP_HOME /app
