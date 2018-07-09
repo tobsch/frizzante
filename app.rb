@@ -7,12 +7,17 @@ require "sinatra/streaming"
 require 'open-uri'
 require 'open3'
 
-set :bind, '0.0.0.0'
-
 config = {
-  proxyURL: ENV['PROXY_URL'] || 'http://192.168.2.184:8080',
-  tunerCount: ENV['TUNER_COUNT'] || 6,  # number of tuners
+  proxyURL: ENV['PROXY_URL'] || 'http://192.168.2.184:4567',
+  tunerCount: ENV['TUNER_COUNT'] || 6,
+  port: ENV['PORT'] || '4567',
+  fritzboxHost: ENV['FRITZBOX_HOST'] || 'fritz.box'
 }
+
+configure do
+  set :server, :puma
+  set :port, config[:port]
+end
 
 discoverData = {
   FriendlyName: 'Frizzante',
@@ -42,7 +47,7 @@ get '/lineup_status.json' do
 end
 
 def get_channels(replace_urls = true, config)
-  urls = [ 'http://fritz.box/dvb/m3u/tvhd.m3u', 'http://fritz.box/dvb/m3u/tvsd.m3u' ]
+  urls = [ "http://#{config[:fritzboxHost]}/dvb/m3u/tvhd.m3u", "http://#{config[:fritzboxHost]}/dvb/m3u/tvsd.m3u" ]
   channels = []
 
   urls.each do |url|
@@ -50,9 +55,9 @@ def get_channels(replace_urls = true, config)
       next unless url = raw.match(/(rtsp:.*?)$/)
       channel_id = (channels.size + 1)
       channels << {
-            GuideNumber: channel_id,
-            GuideName: raw.lines[0].strip,
-            URL: replace_urls ? "#{config[:proxyURL]}/tune-in-#{channel_id}" : url[1]
+        GuideNumber: channel_id.to_s,
+        GuideName: raw.lines[0].strip,
+        URL: replace_urls ? "#{config[:proxyURL]}/tune-in-#{channel_id}" : url[1]
       }
     end
   end
@@ -65,18 +70,17 @@ get '/lineup.json' do
 end
 
 get '/tune-in-:channel' do |channel|
-  if chan = get_channels(false, config).find { |chan| chan[:GuideNumber] == channel.to_i }
+  if chan = get_channels(false, config).find { |chan| chan[:GuideNumber] == channel }
     content_type 'video/mpeg'
     cmd = "ffmpeg -i '#{chan[:URL]}' -acodec copy -vcodec copy -f mpegts -"
     puts "opening #{cmd} pipe"
     stream do |out|
-      IO.popen(cmd, "r") do |f|
-        break if out.closed?
-        loop do
-          out.write f.gets
+      Open3.popen2('ffmpeg', '-i', chan[:URL], '-acodec', 'copy', '-vcodec', 'copy', '-f', 'mpegts', '-') do |stdin, stdout, status_thread|
+        stdout.each_line do |line|
+          out.write line
           out.flush
         end
-        puts f.gets
+        raise "Streaming failed"  unless status_thread.value.success?
       end
     end
   end
