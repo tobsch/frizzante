@@ -8,10 +8,10 @@ require 'open-uri'
 require 'open3'
 
 config = {
-  proxyURL: ENV['PROXY_URL'] || 'http://127.0.0.1:4567',
-  tunerCount: ENV['TUNER_COUNT'] || 6,
+  proxy_url: ENV['PROXY_URL'] || 'http://127.0.0.1:4567',
+  tuner_count: ENV['TUNER_COUNT'] || 6,
   port: ENV['PORT'] || '4567',
-  fritzboxHost: ENV['FRITZBOX_HOST'] || 'fritz.box'
+  fritzbox_host: ENV['FRITZBOX_HOST'] || 'fritz.box'
 }
 
 configure do
@@ -25,12 +25,12 @@ discoverData = {
   Manufacturer: 'Silicondust',
   ModelNumber: 'HDTC-2US',
   FirmwareName: 'hdhomeruntc_atsc',
-  TunerCount: config[:tunerCount].to_i,
+  TunerCount: config[:tuner_count].to_i,
   FirmwareVersion: '20150826',
   DeviceID: '12345678',
   DeviceAuth: 'test1234',
-  BaseURL: '%s' % config[:proxyURL],
-  LineupURL: '%s/lineup.json' % config[:proxyURL]
+  BaseURL: '%s' % config[:proxy_url],
+  LineupURL: '%s/lineup.json' % config[:proxy_url]
 }
 
 # By default Sinatra will return the string as the response.
@@ -48,7 +48,11 @@ get '/lineup_status.json' do
 end
 
 def get_channels(replace_urls = true, config)
-  urls = [ "http://#{config[:fritzboxHost]}/dvb/m3u/tvhd.m3u", "http://#{config[:fritzboxHost]}/dvb/m3u/tvsd.m3u" ]
+  urls = [
+    "http://#{config[:fritzbox_host]}/dvb/m3u/tvhd.m3u",
+    "http://#{config[:fritzbox_host]}/dvb/m3u/tvsd.m3u"
+  ]
+  
   channels = []
 
   urls.each do |url|
@@ -58,7 +62,7 @@ def get_channels(replace_urls = true, config)
       channels << {
         GuideNumber: channel_id.to_s,
         GuideName: raw.lines[0].strip,
-        URL: replace_urls ? "#{config[:proxyURL]}/tune-in-#{channel_id}" : url[1]
+        URL: replace_urls ? "#{config[:proxy_url]}/tune-in-#{channel_id}" : url[1]
       }
     end
   end
