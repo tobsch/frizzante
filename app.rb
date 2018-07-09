@@ -8,7 +8,7 @@ require 'open-uri'
 require 'open3'
 
 config = {
-  proxyURL: ENV['PROXY_URL'] || 'http://192.168.2.184:4567',
+  proxyURL: ENV['PROXY_URL'] || 'http://127.0.0.1:4567',
   tunerCount: ENV['TUNER_COUNT'] || 6,
   port: ENV['PORT'] || '4567',
   fritzboxHost: ENV['FRITZBOX_HOST'] || 'fritz.box'
@@ -16,6 +16,7 @@ config = {
 
 configure do
   set :server, :puma
+  set :bind, '0.0.0.0'
   set :port, config[:port]
 end
 
